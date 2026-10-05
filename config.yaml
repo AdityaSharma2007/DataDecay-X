@@ -1,0 +1,100 @@
+project:
+  name: DataDecay-X
+  version: 1.0.0
+  description: "Predictive Model Reliability Forecasting and Proactive Synthetic Remediation under Temporal Distribution Shift"
+
+random_seed: 42
+
+temporal:
+  n_windows: 12
+  forecast_horizon: 3
+  test_window_count: 2
+  validation_window_count: 2
+
+reliability:
+  metric: f1
+  threshold: 0.70
+  degradation_warning: 0.10
+  degradation_critical: 0.20
+
+drift:
+  psi_threshold_moderate: 0.10
+  psi_threshold_severe: 0.20
+  ks_alpha: 0.05
+  wasserstein_threshold: 0.10
+  severity_weights:
+    psi: 0.4
+    ks: 0.3
+    wasserstein: 0.3
+
+models:
+  default: logistic_regression
+  available:
+    - logistic_regression
+    - svm
+    - naive_bayes
+    - random_forest
+  logistic_regression:
+    max_iter: 1000
+    C: 1.0
+  svm:
+    C: 1.0
+    kernel: rbf
+    probability: true
+  naive_bayes:
+    var_smoothing: 1.0e-9
+  random_forest:
+    n_estimators: 100
+    max_depth: 10
+
+synthetic:
+  default_samples: 500
+  perturbation_scale: 0.05
+  default_method: perturbation
+  methods:
+    - resampling
+    - perturbation
+    - categorical_sampling
+    - hybrid
+
+quality_gate:
+  minimum_score: 0.70
+  checks:
+    schema_validity: true
+    datatype_validity: true
+    missing_values: true
+    value_ranges: true
+    duplicates: true
+    distribution_similarity: true
+    concentration: true
+    class_balance: true
+    label_validity: true
+    downstream_utility: true
+  missing_threshold: 0.05
+  duplicate_threshold: 0.10
+  distribution_threshold: 0.20
+  class_imbalance_ratio: 0.10
+
+forecast:
+  methods:
+    - persistence
+    - linear_trend
+  default_method: linear_trend
+  warning_lead_windows: 2
+
+database:
+  path: data/datadecay.db
+
+directories:
+  data_raw: data/raw
+  data_processed: data/processed
+  data_synthetic: data/synthetic
+  models: models
+  reports: reports
+  logs: logs
+  experiments: experiments
+
+logging:
+  level: INFO
+  file: logs/datadecay.log
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
