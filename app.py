@@ -56,6 +56,7 @@ try:
         get_demo_feature_config,
     )
     from src.datadecay.experiment import run_experiment
+    from src.datadecay.forecasting import estimate_threshold_crossing
     from src.datadecay.intervention import STATE_RECOVERY_RECOMMENDED, STATE_STABLE, STATE_WATCH
     from src.datadecay.reporting import generate_html_report_snippet, save_report_json
     from src.datadecay.utils import setup_logging, ensure_dir
@@ -165,6 +166,16 @@ def _safe_float(v, default=0.0):
         return default
 
 
+def _safe_bool(v, default=False):
+    """Convert scalar-like values to bool without NumPy ambiguity."""
+    if v is None:
+        return default
+    try:
+        return bool(v)
+    except (TypeError, ValueError):
+        return default
+
+
 def _pct(v):
     return f"{_safe_float(v)*100:.1f}%"
 
@@ -200,6 +211,43 @@ def _no_experiment_warning():
 
 def _get_exp() -> dict | None:
     return st.session_state.get("experiment_state")
+
+
+def _refresh_ttd(exp: dict) -> dict:
+    """Always derive TTD from the current forecast so the UI cannot show a stale/missing value."""
+    forecast = exp.get("forecast_result", {}) or {}
+    if not forecast:
+        return exp.get("ttd_result", {}) or {}
+
+    history = forecast.get("history_values")
+    forecast_values = forecast.get("forecast_values")
+
+    # Fallback to the reliability timeline if an older in-memory experiment
+    # does not contain forecast history values.
+    if history is None or len(history) == 0:
+        timeline = exp.get("reliability_timeline")
+        if timeline is not None and hasattr(timeline, "columns") and "f1" in timeline.columns:
+            history = timeline["f1"].to_numpy(dtype=float)
+
+    if forecast_values is None or len(forecast_values) == 0 or history is None or len(history) == 0:
+        return exp.get("ttd_result", {}) or {}
+
+    threshold = _safe_float(
+        (exp.get("config", {}) or {}).get("threshold", 0.70),
+        0.70,
+    )
+
+    ttd = estimate_threshold_crossing(
+        history=np.asarray(history, dtype=float),
+        forecast_values=np.asarray(forecast_values, dtype=float),
+        threshold=threshold,
+        start_window_offset=len(history),
+    )
+
+    # Keep session state consistent so Overview and Reliability Forecast use
+    # exactly the same TTD result.
+    exp["ttd_result"] = ttd
+    return ttd
 
 
 def _plotly_defaults() -> dict:
@@ -308,7 +356,7 @@ def page_overview():
     current_f1 = _safe_float(rel_tl["f1"].iloc[-1]) if rel_tl is not None and not rel_tl.empty else baseline_f1
     overall_drift = exp.get("overall_drift_severity", {}) or {}
     dsi = _safe_float(overall_drift.get("drift_severity_index", 0.0))
-    ttd = exp.get("ttd_result", {}) or {}
+    ttd = _refresh_ttd(exp)
     ttd_text = ttd.get("ttd_estimate", "N/A")
     eval_sum = exp.get("evaluation_summary", {}) or {}
     best_strat = eval_sum.get("best_strategy", "—")
@@ -323,7 +371,7 @@ def page_overview():
         ("Current F1", f"{current_f1:.3f}", f"Baseline: {baseline_f1:.3f}"),
         ("Drift Severity", f"{dsi:.3f}", overall_drift.get("severity_label", "—").upper()),
         ("Forecast State", state.replace("_", " "), irec.get("confidence", "").upper()),
-        ("TTD Estimate", "Detected" if ttd.get("crossing_detected") else "None", "within horizon [ESTIMATE]"),
+        ("TTD Estimate", ttd.get("ttd_label", "N/A"), ttd.get("ttd_status", "unknown").replace("_", " ").upper()),
         ("Recovery Status", best_strat.replace("_", " ").title(), eval_sum.get("final_decision", "—")),
     ]
     for col, (label, value, sub) in zip(cols, cards):
@@ -1039,7 +1087,7 @@ def page_reliability_forecast():
         return
 
     forecast = exp.get("forecast_result", {}) or {}
-    ttd = exp.get("ttd_result", {}) or {}
+    ttd = _refresh_ttd(exp)
     irec = exp.get("intervention_result", {}) or {}
 
     if not forecast:
@@ -1047,21 +1095,144 @@ def page_reliability_forecast():
         return
 
     # Summary cards
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Forecast Method", forecast.get("method", "—").replace("_", " ").title())
     c2.metric("Forecast Horizon", f"{forecast.get('horizon', 0)} windows")
     c3.metric("Trend", (exp.get("degradation", {}) or {}).get("trend", "—").upper())
     c4.metric("Current Reliability", f"{_safe_float(ttd.get('current_reliability')):.4f}")
+    c5.metric("TTD", ttd.get("ttd_label", "N/A"))
 
-    # TTD estimate
+    # TTD estimate -- render this as a dedicated, unavoidable panel as well
+    # as the summary metric above.  This makes TTD visible for both new and
+    # legacy experiment states and avoids relying on the forecast message alone.
     st.markdown("---")
-    st.markdown("**Time-to-Decay Estimate (ESTIMATE ONLY — not a guaranteed future event)**")
-    if ttd.get("already_below"):
-        st.error(f"Already below threshold: {ttd.get('ttd_estimate', '')}")
-    elif ttd.get("crossing_detected"):
-        st.warning(f"{ttd.get('ttd_estimate', '')}")
+    st.markdown("### ⏳ Time-to-Decay (TTD*)")
+
+    ttd_label = str(ttd.get("ttd_label") or f"> {forecast.get('horizon', 0)} windows")
+    ttd_status = str(ttd.get("ttd_status", "unknown")).replace("_", " ").upper()
+    ttd_value = ttd.get("ttd_windows")
+
+    ttd_cols = st.columns(3)
+    ttd_cols[0].metric("TTD", ttd_label)
+    ttd_cols[1].metric("TTD Status", ttd_status)
+    ttd_cols[2].metric(
+        "Threshold",
+        f"{_safe_float(ttd.get('threshold', threshold if 'threshold' in locals() else 0.70)):.2f}",
+    )
+
+    # Build a dynamic explanation from the CURRENT TTD result.
+    # The guide remains useful as a reference, but the highlighted row and
+    # current-story text change automatically when reliability, threshold,
+    # forecast values, or horizon change.
+    horizon = int(forecast.get("horizon", len(forecast.get("forecast_values", []))) or 0)
+    threshold_value = _safe_float(ttd.get("threshold", 0.70), 0.70)
+    current_reliability = _safe_float(ttd.get("current_reliability"), 0.0)
+    status_key = str(ttd.get("ttd_status", "unknown"))
+    crossing_window = ttd.get("crossing_window")
+    ttd_value = ttd.get("ttd_windows")
+
+    forecast_values_raw = forecast.get("forecast_values", [])
+    if forecast_values_raw is None:
+        forecast_values_raw = []
+    try:
+        forecast_values_arr = np.asarray(forecast_values_raw, dtype=float)
+    except (TypeError, ValueError):
+        forecast_values_arr = np.array([], dtype=float)
+
+    if status_key == "already_below":
+        ttd_story = (
+            f"The current reliability is {current_reliability:.4f}, which is already "
+            f"at or below the threshold of {threshold_value:.2f}. TTD is therefore "
+            f"0 windows: decay has already reached the configured boundary."
+        )
+    elif status_key == "crossing":
+        steps = int(ttd_value) if ttd_value is not None else None
+        crossing_value = None
+        if steps is not None and 1 <= steps <= len(forecast_values_arr):
+            crossing_value = float(forecast_values_arr[steps - 1])
+        if crossing_value is not None:
+            ttd_story = (
+                f"The forecast predicts reliability will reach or fall below the "
+                f"{threshold_value:.2f} threshold in about {steps} future window(s) "
+                f"(forecast value ≈ {crossing_value:.4f})."
+            )
+        else:
+            ttd_story = (
+                f"The forecast predicts a threshold crossing in about {steps} "
+                f"future window(s)."
+            )
+    elif status_key == "not_within_horizon":
+        ttd_story = (
+            f"The current reliability is {current_reliability:.4f} and the forecast "
+            f"does not reach the {threshold_value:.2f} threshold within the next "
+            f"{horizon} forecast window(s). TTD is therefore shown as > {horizon} windows. "
+            f"This does not mean decay will never occur; it means it is not predicted "
+            f"inside the current horizon."
+        )
+    elif status_key == "insufficient_forecast":
+        ttd_story = (
+            f"TTD cannot be estimated because there are not enough valid forecast "
+            f"points for the configured {horizon}-window horizon."
+        )
+    elif status_key == "invalid_forecast":
+        ttd_story = (
+            "TTD cannot be estimated because the forecast contains invalid or "
+            "non-finite values."
+        )
     else:
-        st.success(f"{ttd.get('ttd_estimate', '')}")
+        ttd_story = "TTD could not be determined from the current forecast."
+
+    with st.expander("How to read TTD and Forecast Horizon", expanded=True):
+        st.markdown("**Current result**")
+        st.info(ttd_story)
+
+        st.markdown("**Key inputs**")
+        input_df = pd.DataFrame([
+            ["Current Reliability", f"{current_reliability:.4f}", "Latest observed model reliability."],
+            ["Threshold", f"{threshold_value:.2f}", "Reliability level used to define decay."],
+            ["Forecast Horizon", f"{horizon} window(s)", "How many future windows are included in the current forecast."],
+            ["TTD", ttd_label, "Estimated number of future windows until reliability reaches or falls below the threshold."],
+        ], columns=["Item", "Current Value", "What it means"])
+        st.dataframe(input_df, hide_index=True, use_container_width=True)
+
+        st.markdown("**TTD status guide**")
+        status_rows = [
+            ["ALREADY DECAYED", "0 windows", "Current reliability is already at or below the threshold.", status_key == "already_below"],
+            ["DECAY EXPECTED", f"~1 to ~{horizon} windows", f"Forecast reaches or falls below {threshold_value:.2f} within the current horizon.", status_key == "crossing"],
+            ["NOT WITHIN HORIZON", f"> {horizon} windows", f"No crossing of {threshold_value:.2f} is predicted in the current {horizon}-window horizon.", status_key == "not_within_horizon"],
+            ["INSUFFICIENT FORECAST", "N/A", "Not enough valid future forecast points are available to estimate TTD.", status_key == "insufficient_forecast"],
+            ["INVALID FORECAST", "N/A", "Forecast contains invalid values, so TTD cannot be estimated reliably.", status_key == "invalid_forecast"],
+        ]
+        status_df = pd.DataFrame(status_rows, columns=["TTD Status", "Typical TTD", "Interpretation", "Current"])
+        status_df["Current"] = status_df["Current"].map(lambda x: "← CURRENT" if x else "")
+        st.dataframe(status_df, hide_index=True, use_container_width=True)
+
+        st.markdown("**How the result changes**")
+        if status_key == "already_below":
+            st.markdown(
+                f"- Because **{current_reliability:.4f} ≤ {threshold_value:.2f}**, the current result is **0 windows**."
+            )
+        elif status_key == "crossing":
+            st.markdown(
+                f"- Because the forecast crosses **{threshold_value:.2f}** within the horizon, the result is **{ttd_label}**."
+            )
+        elif status_key == "not_within_horizon":
+            st.markdown(
+                f"- Because no forecast point reaches **{threshold_value:.2f}** in the next **{horizon}** windows, the result is **> {horizon} windows**."
+            )
+        elif status_key == "insufficient_forecast":
+            st.markdown("- Add enough valid forecast points to estimate a TTD.")
+        elif status_key == "invalid_forecast":
+            st.markdown("- Fix the invalid forecast values before interpreting TTD.")
+        else:
+            st.markdown("- TTD is unavailable for the current forecast state.")
+
+        st.markdown(
+            f"**Forecast Horizon rule:** `N` always means the currently configured horizon. "
+            f"For example, with a 5-window horizon, **> 5 windows** means no threshold "
+            f"crossing is predicted in those five forecast windows; it does not mean decay will never occur."
+        )
+
 
     st.markdown("---")
 
@@ -1112,6 +1283,11 @@ def page_reliability_forecast():
     if trend_meta:
         with st.expander("Forecast Details"):
             st.json(trend_meta)
+
+    st.caption(
+        "Note: TTD is an estimate based on the configured forecast horizon and threshold; "
+        "it is not a guaranteed future event."
+    )
 
     # Intervention state
     st.markdown("---")
@@ -1246,10 +1422,18 @@ def page_quality_gate():
             st.error(f"{icon} **{check_name}**: {detail}")
 
     # Score gauge
+    score_pct = max(0.0, min(100.0, score * 100.0))
+
+    # Keep the gauge in a known paper-coordinate domain so the pointer can
+    # be positioned ON the meter rather than beside it.
+    gauge_domain_x = [0.18, 0.82]
+    gauge_domain_y = [0.08, 0.90]
+
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
-        value=score * 100,
+        value=score_pct,
         title={"text": "Quality Score"},
+        domain={"x": gauge_domain_x, "y": gauge_domain_y},
         gauge={
             "axis": {"range": [0, 100]},
             "bar": {"color": "#3b82f6"},
@@ -1265,6 +1449,7 @@ def page_quality_gate():
             },
         },
     ))
+
     fig.update_layout(height=300, **_plotly_defaults())
     st.plotly_chart(fig, use_container_width=True)
 
