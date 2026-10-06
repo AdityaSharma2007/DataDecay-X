@@ -81,45 +81,512 @@ if _BACKEND_OK:
 # ---------------------------------------------------------------------------
 st.markdown("""
 <style>
-    /* Sidebar */
-    [data-testid="stSidebar"] { background-color: #0f172a; }
-    [data-testid="stSidebar"] * { color: #e2e8f0 !important; }
+/* =========================================================
+   DataDecay-X — Premium Visual System
+   UI-only styling: no application logic is changed.
+   ========================================================= */
 
-    /* Metric cards */
+/* ---------- App canvas ---------- */
+.stApp {
+    background:
+        radial-gradient(circle at 88% 4%, rgba(30, 136, 229, 0.10), transparent 30%),
+        radial-gradient(circle at 15% 0%, rgba(99, 102, 241, 0.07), transparent 28%),
+        linear-gradient(145deg, #06101f 0%, #091525 48%, #07111f 100%);
+    color: #e8eef8;
+}
+
+[data-testid="stAppViewContainer"] {
+    background: transparent;
+}
+
+[data-testid="stMain"] {
+    background: transparent;
+}
+
+.main .block-container {
+    max-width: 1500px;
+    padding-top: 6.6rem;
+    padding-bottom: 4rem;
+}
+
+/* ---------- Premium top navigation ---------- */
+.ddx-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 72px;
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    padding: 0 34px;
+    background: rgba(5, 14, 27, 0.90);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.13);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.22);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+}
+
+.ddx-brand {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    min-width: 300px;
+}
+
+.ddx-logo {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #2563eb, #06b6d4);
+    box-shadow: 0 7px 22px rgba(37, 99, 235, 0.30);
+}
+
+.ddx-brand-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.ddx-brand-name {
+    color: #f8fbff;
+    font-size: 19px;
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+}
+
+.ddx-brand-sub {
+    color: #7187a5;
+    font-size: 9px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+}
+
+.ddx-topbar-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ddx-current-page {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border: 1px solid rgba(96, 165, 250, 0.15);
+    border-radius: 999px;
+    background: rgba(15, 31, 52, 0.62);
+    color: #cfe0f5;
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.ddx-current-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #38bdf8;
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.8);
+}
+
+.ddx-topbar-right {
+    min-width: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.ddx-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(34, 197, 94, 0.18);
+    background: rgba(22, 101, 52, 0.14);
+    color: #9be7b1;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.ddx-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 9px rgba(74, 222, 128, 0.8);
+}
+
+.ddx-version {
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.13);
+    color: #8295ae;
+    background: rgba(15, 23, 42, 0.55);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+@media (max-width: 900px) {
+    .ddx-brand { min-width: auto; }
+    .ddx-brand-sub, .ddx-topbar-center { display: none; }
+    .ddx-topbar-right { min-width: auto; }
+    .ddx-topbar { padding: 0 18px; }
+    .ddx-topbar { height: 64px; }
+    .main .block-container { padding-top: 5.7rem; }
+}
+
+/* ---------- Typography ---------- */
+html, body, [class*="css"] {
+    font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont,
+                 "Segoe UI", sans-serif;
+}
+
+h1, h2, h3, h4 {
+    letter-spacing: -0.025em;
+}
+
+h1 {
+    font-size: clamp(2.15rem, 3vw, 3.1rem) !important;
+    font-weight: 800 !important;
+    line-height: 1.08 !important;
+    color: #f8fbff !important;
+    margin-bottom: 0.55rem !important;
+}
+
+h2 {
+    color: #f1f6ff !important;
+    font-weight: 750 !important;
+}
+
+h3 {
+    color: #eaf2ff !important;
+    font-weight: 700 !important;
+}
+
+/* ---------- Sidebar ---------- */
+[data-testid="stSidebar"] {
+    background:
+        linear-gradient(180deg, #07152a 0%, #071322 55%, #06101d 100%) !important;
+    border-right: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+[data-testid="stSidebar"] > div:first-child {
+    padding-top: 1.25rem;
+}
+
+[data-testid="stSidebar"] * {
+    color: #dce7f7 !important;
+}
+
+[data-testid="stSidebar"] hr {
+    border-color: rgba(148, 163, 184, 0.12) !important;
+    margin: 0.8rem 0 1rem !important;
+}
+
+/* Sidebar navigation buttons */
+[data-testid="stSidebar"] .stButton > button {
+    min-height: 42px;
+    justify-content: flex-start;
+    text-align: left;
+    padding: 0.62rem 0.85rem;
+    margin: 0.16rem 0;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    background: transparent;
+    color: #c9d7e9 !important;
+    font-size: 0.90rem;
+    font-weight: 550;
+    transition: all 160ms ease;
+}
+
+[data-testid="stSidebar"] .stButton > button:hover {
+    background: rgba(59, 130, 246, 0.10);
+    border-color: rgba(96, 165, 250, 0.16);
+    color: #ffffff !important;
+    transform: translateX(2px);
+}
+
+[data-testid="stSidebar"] .stButton > button:focus {
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.18);
+}
+
+/* ---------- Page intro ---------- */
+.main .block-container > div:first-child {
+    scroll-behavior: smooth;
+}
+
+.main .block-container .stTitle {
+    margin-top: 0.2rem;
+}
+
+/* ---------- Buttons ---------- */
+.stButton > button {
+    min-height: 46px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    background: rgba(15, 27, 45, 0.72);
+    color: #eaf2ff;
+    font-weight: 650;
+    letter-spacing: 0.005em;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+    transition: transform 160ms ease, box-shadow 160ms ease,
+                border-color 160ms ease, background 160ms ease;
+}
+
+.stButton > button:hover {
+    transform: translateY(-1px);
+    border-color: rgba(96, 165, 250, 0.40);
+    background: rgba(23, 40, 64, 0.92);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
+}
+
+.stButton > button[kind="primary"] {
+    border: 1px solid rgba(96, 165, 250, 0.30);
+    background: linear-gradient(135deg, #2563eb 0%, #0891b2 100%);
+    box-shadow: 0 10px 30px rgba(37, 99, 235, 0.25);
+}
+
+.stButton > button[kind="primary"]:hover {
+    background: linear-gradient(135deg, #3474ef 0%, #11a0c3 100%);
+    box-shadow: 0 14px 34px rgba(37, 99, 235, 0.32);
+}
+
+/* ---------- Metric cards ---------- */
+.metric-card {
+    position: relative;
+    min-height: 118px;
+    overflow: hidden;
+    background:
+        linear-gradient(145deg, rgba(20, 35, 56, 0.94), rgba(10, 23, 39, 0.96));
+    border: 1px solid rgba(148, 163, 184, 0.13);
+    border-radius: 16px;
+    padding: 18px 16px 15px;
+    text-align: left;
+    box-shadow:
+        0 12px 30px rgba(0, 0, 0, 0.18),
+        inset 0 1px 0 rgba(255,255,255,0.035);
+    transition: transform 180ms ease, border-color 180ms ease,
+                box-shadow 180ms ease;
+}
+
+.metric-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, #3b82f6, #06b6d4);
+    opacity: 0.85;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(96, 165, 250, 0.24);
+    box-shadow:
+        0 16px 36px rgba(0, 0, 0, 0.25),
+        0 0 0 1px rgba(59, 130, 246, 0.05);
+}
+
+.metric-label {
+    font-size: 0.68rem;
+    color: #8fa4bf;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    font-weight: 700;
+}
+
+.metric-value {
+    font-size: clamp(1.35rem, 2vw, 1.85rem);
+    line-height: 1.15;
+    font-weight: 800;
+    color: #f8fbff;
+    margin: 9px 0 6px;
+}
+
+.metric-sub {
+    font-size: 0.72rem;
+    color: #71869f;
+    line-height: 1.35;
+}
+
+/* ---------- Section headers ---------- */
+.section-header {
+    position: relative;
+    border: 1px solid rgba(96, 165, 250, 0.13);
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin: 24px 0 12px;
+    font-weight: 700;
+    font-size: 0.90rem;
+    color: #dcecff;
+    background: linear-gradient(
+        90deg,
+        rgba(30, 64, 175, 0.14),
+        rgba(15, 23, 42, 0.20)
+    );
+    box-shadow: inset 3px 0 0 #3b82f6;
+}
+
+/* ---------- Info / status boxes ---------- */
+.info-box {
+    background:
+        linear-gradient(135deg, rgba(17, 48, 87, 0.72), rgba(11, 30, 53, 0.76));
+    border: 1px solid rgba(59, 130, 246, 0.28);
+    border-radius: 14px;
+    padding: 16px 18px;
+    font-size: 0.86rem;
+    color: #c7dcf7;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.13);
+}
+
+.stAlert {
+    border-radius: 13px !important;
+    border: 1px solid rgba(148, 163, 184, 0.14) !important;
+}
+
+/* ---------- Tabs ---------- */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 6px;
+    background: rgba(7, 18, 32, 0.45);
+    padding: 5px;
+    border: 1px solid rgba(148, 163, 184, 0.10);
+    border-radius: 12px;
+}
+
+.stTabs [data-baseweb="tab"] {
+    height: 40px;
+    border-radius: 9px;
+    color: #8fa4bf;
+    font-weight: 600;
+}
+
+.stTabs [aria-selected="true"] {
+    background: rgba(59, 130, 246, 0.14);
+    color: #eaf4ff !important;
+}
+
+/* ---------- Inputs ---------- */
+.stTextInput input,
+.stNumberInput input,
+.stSelectbox [data-baseweb="select"] > div,
+.stMultiSelect [data-baseweb="select"] > div,
+.stTextArea textarea {
+    background: rgba(10, 23, 39, 0.78) !important;
+    border-color: rgba(148, 163, 184, 0.16) !important;
+    border-radius: 10px !important;
+    color: #edf5ff !important;
+}
+
+.stFileUploader {
+    border-radius: 13px;
+}
+
+[data-testid="stFileUploaderDropzone"] {
+    background: rgba(10, 23, 39, 0.58);
+    border: 1px dashed rgba(96, 165, 250, 0.30);
+    border-radius: 13px;
+}
+
+/* ---------- Dataframes ---------- */
+[data-testid="stDataFrame"] {
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    border-radius: 13px;
+    overflow: hidden;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.13);
+}
+
+/* ---------- Expanders ---------- */
+[data-testid="stExpander"] {
+    background: rgba(10, 23, 39, 0.48);
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    border-radius: 13px;
+}
+
+/* ---------- Horizontal rules ---------- */
+hr {
+    border-color: rgba(148, 163, 184, 0.10) !important;
+}
+
+/* ---------- Badges ---------- */
+.badge-stable,
+.badge-watch,
+.badge-recovery,
+.badge-neutral {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 750;
+    letter-spacing: 0.03em;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.16);
+}
+
+.badge-stable {
+    background: rgba(22, 163, 74, 0.16);
+    border: 1px solid rgba(74, 222, 128, 0.28);
+    color: #86efac !important;
+}
+
+.badge-watch {
+    background: rgba(217, 119, 6, 0.16);
+    border: 1px solid rgba(251, 191, 36, 0.28);
+    color: #fcd34d !important;
+}
+
+.badge-recovery {
+    background: rgba(220, 38, 38, 0.16);
+    border: 1px solid rgba(248, 113, 113, 0.28);
+    color: #fca5a5 !important;
+}
+
+.badge-neutral {
+    background: rgba(71, 85, 105, 0.18);
+    border: 1px solid rgba(148, 163, 184, 0.20);
+    color: #cbd5e1 !important;
+}
+
+/* ---------- Charts ---------- */
+.js-plotly-plot .plotly .modebar {
+    opacity: 0.35;
+    transition: opacity 160ms ease;
+}
+
+.js-plotly-plot .plotly:hover .modebar {
+    opacity: 0.9;
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 900px) {
+    .main .block-container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
     .metric-card {
-        background: #1e293b;
-        border: 1px solid #334155;
-        border-radius: 8px;
-        padding: 16px;
-        text-align: center;
-    }
-    .metric-label { font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
-    .metric-value { font-size: 28px; font-weight: 700; color: #f1f5f9; margin: 4px 0; }
-    .metric-sub   { font-size: 12px; color: #64748b; }
-
-    /* Status badges */
-    .badge-stable   { background:#16a34a; color:#fff; padding:4px 12px; border-radius:99px; font-size:13px; font-weight:600; }
-    .badge-watch    { background:#d97706; color:#fff; padding:4px 12px; border-radius:99px; font-size:13px; font-weight:600; }
-    .badge-recovery { background:#dc2626; color:#fff; padding:4px 12px; border-radius:99px; font-size:13px; font-weight:600; }
-    .badge-neutral  { background:#475569; color:#fff; padding:4px 12px; border-radius:99px; font-size:13px; font-weight:600; }
-
-    /* Section headers */
-    .section-header {
-        border-left: 4px solid #3b82f6;
-        padding-left: 10px;
-        margin: 16px 0 8px 0;
-        font-weight: 600;
+        min-height: 105px;
+        padding: 15px;
     }
 
-    /* Info box */
-    .info-box {
-        background: #1e3a5f;
-        border: 1px solid #2563eb;
-        border-radius: 6px;
-        padding: 12px;
-        font-size: 13px;
-        color: #bfdbfe;
+    h1 {
+        font-size: 2rem !important;
     }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -264,9 +731,48 @@ def _plotly_defaults() -> dict:
 # Sidebar navigation
 # ---------------------------------------------------------------------------
 
+def render_topbar():
+    """Render the product-style top navigation. Visual only; no app logic is changed."""
+    page = st.session_state.get("page", "Overview")
+    exp = _get_exp()
+    if exp:
+        status = str(exp.get("status", "running")).lower()
+        status_text = "Experiment ready" if status == "completed" else "Experiment running"
+    else:
+        status_text = "Workspace ready"
+
+    st.markdown(
+        f"""
+        <div class=\"ddx-topbar\">
+            <div class=\"ddx-brand\">
+                <div class=\"ddx-logo\">✦</div>
+                <div class=\"ddx-brand-copy\">
+                    <div class=\"ddx-brand-name\">DataDecay-X</div>
+                    <div class=\"ddx-brand-sub\">Model Reliability Intelligence</div>
+                </div>
+            </div>
+            <div class=\"ddx-topbar-center\">
+                <div class=\"ddx-current-page\">
+                    <span class=\"ddx-current-dot\"></span>
+                    <span>{page}</span>
+                </div>
+            </div>
+            <div class=\"ddx-topbar-right\">
+                <div class=\"ddx-status\">
+                    <span class=\"ddx-status-dot\"></span>
+                    <span>{status_text}</span>
+                </div>
+                <div class=\"ddx-version\">v1.0</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_sidebar():
     with st.sidebar:
-        st.markdown("## DATADECAY-X")
+        st.markdown("## WORKSPACE")
         st.markdown("---")
 
         pages = [
@@ -1973,6 +2479,7 @@ def main():
         )
         return
 
+    render_topbar()
     render_sidebar()
 
     page = st.session_state.get("page", "Overview")
